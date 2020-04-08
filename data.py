@@ -6,6 +6,7 @@ import pandas as pd
 import config as cfg
 import pickle
 import os
+import numpy as np
 
 class User:
     """
@@ -114,6 +115,14 @@ class Reader:
     Class to read data from files and store them in specific data structures.
     """
 
+    """
+        Objects to store the ratings matrix with users on the side and items on top, and indexes in these matrix
+        related to users and movies.
+    """
+    ratingsMatrix = None
+    userIndexes = {}
+    moviesIndexes = {}
+
     def __init__(self):
 
         """
@@ -126,6 +135,8 @@ class Reader:
         self.movies = pd.read_csv(cfg.movies, header=None)
         self.movies_tags = pd.read_csv(cfg.movies_tags, header=None, encoding="ISO-8859-1")
         self.ratings = pd.read_csv(cfg.ratings, header=None)
+
+        self.ratingsUserMovie = {}
 
     def get_users(self):
         """
@@ -191,6 +202,17 @@ class Reader:
 
         return movies
 
+    def get_ratings(self):
+        for row, data in self.ratings.iterrows():
+            userId = data[0]
+            movieId = data[1]
+            rating = data[2]
+
+            # Store tuple
+            self.ratingsUserMovie[(userId, movieId)] = rating
+
+        return self.ratingsUserMovie
+
     def write_serialized(self):
         """
         Write serialized object in a file
@@ -208,7 +230,10 @@ class Reader:
         print("Creating movies array...")
         movies = self.get_movies()
 
-        data = (users, movies)
+        print("Creating ratings tuples...")
+        ratings = self.get_ratings()
+
+        data = (users, movies, ratings)
 
         # Save data as serialized object
         with open(cfg.serialized, 'wb') as serialized:
@@ -230,7 +255,7 @@ class Reader:
             with open(cfg.serialized, 'rb') as file:
                 serialized = pickle.load(file)
 
-        return serialized[0], serialized[1]  # users, movies
+        return serialized[0], serialized[1], serialized[2]  # users, movies, ratings
 
     def write_similarities(self, data):
         """
@@ -259,3 +284,37 @@ class Reader:
                 data = pickle.load(file)
 
         return data
+
+    def create_ratings_matrix(self, users, movies):
+        """
+        Method to create ratings matrix in a numpy array format.
+        :param users: 
+        :param movies: 
+        :return: (userIndexes, moviesIndexes, ratingsMatrix)
+        """""
+
+        numUsers = len(users)
+        numMovies = len(movies)
+
+        # Initialize ratings matrix
+        self.ratingsMatrix = np.zeros((numUsers, numMovies), dtype=float)
+
+        # Associate index to each movie
+        for index, movie in enumerate(movies):
+            self.moviesIndexes[movie] = index
+
+        # Fill ratingsMatrix
+        for indexUser, user in enumerate(users):
+            # Store index of the user
+            self.userIndexes[user] = indexUser
+
+            # Fill ratings matrix
+            for movie in users[user].get_ratings():
+                id_movie = movie[0]
+                indexMovie = self.moviesIndexes[id_movie]
+                rating = movie[1]
+
+                # Write on ratingMatrix
+                self.ratingsMatrix[indexUser, indexMovie] = rating
+
+        return (self.ratingsMatrix, self.userIndexes, self.moviesIndexes)

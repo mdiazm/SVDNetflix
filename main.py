@@ -3,17 +3,19 @@ Main script of the system.
 
 """
 
-from recommender_system import CollaborativeFilteringRS
+from recommender_system import SVDNetflix
 from gui import GUI
 
 if __name__ == "__main__":
 
     # Test Content Based Recommender System computation
-    recommender_system = CollaborativeFilteringRS()
+    recommender_system = SVDNetflix()
     recommender_system.initialize_system()
+    recommender_system.train_system()
+    recommender_system.store_data()
 
-    gui = GUI(system=recommender_system)
-    gui.configure(title="Collaborative-filtering Recommender System")
-    gui.show()
+    # gui = GUI(system=recommender_system)
+    # gui.configure(title="Collaborative-filtering Recommender System")
+    # gui.show()
 
     exit(0)

@@ -26,3 +26,6 @@ serialized = os.path.join(DATA_PATH, "data.pickle")
 
 # Serialized object for avoiding recalculating similarities between movies
 similarities = os.path.join(DATA_PATH, "similarities.pickle")
+
+# Matrix from SVD
+matrix = os.path.join(DATA_PATH, "svd.pickle")
