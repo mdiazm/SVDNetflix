@@ -28,4 +28,4 @@ serialized = os.path.join(DATA_PATH, "data.pickle")
 similarities = os.path.join(DATA_PATH, "similarities.pickle")
 
 # Matrix from SVD
-matrix = os.path.join(DATA_PATH, "svd3.pickle")
+matrix = os.path.join(DATA_PATH, "svd4.pickle")

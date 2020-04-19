@@ -26,8 +26,8 @@ class SVDNetflix:
     numLatentFactors = 40
     initializationValue = 0.1
     learningRate = 0.001
-    regularizeParameter = 25.0
-    numEpochs = 120
+    regularizeParameter = 0.02 # As recommended in the article https://sifter.org/~simon/journal/20061211.html
+    numEpochs = 12
 
     def __init__(self):
         self.tag_movie = {}
@@ -129,8 +129,9 @@ class SVDNetflix:
                     errors.append(err)
 
                     # Perform Gradient Descent
+                    initialUserValue = userValue[userIndex] # To avoid that update on userValue modifies update on movieValue
                     userValue[userIndex] += self.learningRate * (err * movieValue[movieIndex] - self.regularizeParameter * userValue[userIndex])
-                    movieValue[movieIndex] += self.learningRate * (err * userValue[userIndex] - self.regularizeParameter * movieValue[movieIndex])
+                    movieValue[movieIndex] += self.learningRate * (err * initialUserValue - self.regularizeParameter * movieValue[movieIndex])
 
                 print("Avg error: {}".format(np.mean(errors)))
 
