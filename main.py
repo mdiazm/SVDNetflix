@@ -13,9 +13,10 @@ if __name__ == "__main__":
     recommender_system.initialize_system()
     recommender_system.train_system()
     recommender_system.store_data()
+    # recommender_system.load_data()
 
-    # gui = GUI(system=recommender_system)
-    # gui.configure(title="Collaborative-filtering Recommender System")
-    # gui.show()
+    gui = GUI(system=recommender_system)
+    gui.configure(title="SVD Recommender System")
+    gui.show()
 
     exit(0)

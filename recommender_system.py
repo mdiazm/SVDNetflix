@@ -26,13 +26,16 @@ class SVDNetflix:
     numLatentFactors = 40
     initializationValue = 0.1
     learningRate = 0.001
-    regularizeParameter = 0.02
+    regularizeParameter = 25.0
     numEpochs = 120
 
     def __init__(self):
         self.tag_movie = {}
         self.initialized = False
         self.movie_similarities = {}
+
+        # Cache for avoiding calculating product between feature vectors on each call to predict function.
+        self.cache = None
 
     def initialize_system(self):
         if not self.initialized:
@@ -97,6 +100,9 @@ class SVDNetflix:
         # For each feature
         for feature in range(self.numLatentFactors):
 
+            # Initialize cache for this feature
+            self.init_cache(feature)
+
             # Train during numEpochs iterations
             for epoch in range(self.numEpochs):
                 print("Training epoch {} for feature {}".format(epoch + 1, feature + 1))
@@ -104,6 +110,9 @@ class SVDNetflix:
                 # Get user and movie values from users preferences and movie descriptions for this feature
                 userValue = self.usersPreferences[:, feature]
                 movieValue = self.moviesPreferences[:, feature]
+
+                # errors
+                errors = []
 
                 # Iterate throughout all ratings
                 for (user, movie) in self.ratingsTuples:
@@ -113,14 +122,17 @@ class SVDNetflix:
                     movieIndex = self.moviesIndexes[movie]
 
                     # Predict
-                    predictedRating = self.predict(user, movie)
+                    predictedRating = self.predict_precalculated(user, movie, feature)
 
                     # Calculate error
                     err = self.ratingsTuples[(user, movie)] - predictedRating
+                    errors.append(err)
 
                     # Perform Gradient Descent
                     userValue[userIndex] += self.learningRate * (err * movieValue[movieIndex] - self.regularizeParameter * userValue[userIndex])
                     movieValue[movieIndex] += self.learningRate * (err * userValue[userIndex] - self.regularizeParameter * movieValue[movieIndex])
+
+                print("Avg error: {}".format(np.mean(errors)))
 
     def store_data(self):
         data = (self.usersPreferences, self.moviesPreferences)
@@ -133,4 +145,64 @@ class SVDNetflix:
         with open(cfg.matrix, 'rb') as matrix:
             data = pickle.load(matrix)
 
-        return data[0], data[1]
+        self.usersPreferences = data[0]
+        self.moviesPreferences = data[1]
+
+    def init_cache(self, feature):
+        """
+        This method is to precalculate ratings matrix except one feature. This will make the calculations faster.
+        :param user:
+        :param movie:
+        :return: predicted rating.
+        """
+
+        # Extract arrays for user preferences and movie descriptions
+        userPreferencesModified = np.delete(self.usersPreferences, feature, axis=1)
+        movieDescriptionsModified = np.delete(self.moviesPreferences, feature, axis=1)
+
+        # Perform scalar product for both matrix
+        precalculatedRatingMatrix = np.dot(userPreferencesModified, movieDescriptionsModified.T)
+
+        # Store precalculated matrix
+        self.cache = precalculatedRatingMatrix
+
+    def predict_precalculated(self, user, movie, feature):
+        """
+        Accelerate predictions during training.
+        :param user:
+        :param movie:
+        :param feature:
+        :return:
+        """
+
+        # Get user and movies indexes.
+        userIndex = self.userIndexes[user]
+        movieIndex = self.moviesIndexes[movie]
+
+        # Get precalculated value
+        predictedRating = self.cache[userIndex, movieIndex]
+
+        # Calculate contribution from this feature to this rating
+        predictedRating += self.usersPreferences[userIndex, feature] * self.moviesPreferences[movieIndex, feature]
+
+        return predictedRating
+
+    def query(self, user_id, query_limit=10):
+        not_seen = set(self.movies).difference(set([id_movie for (id_movie, rating) in self.users[user_id].get_ratings()]))
+
+        ranking = []
+
+        for movie in not_seen:
+            rating = self.predict(user_id, movie)
+            ranking.append((movie, rating))
+
+        # Sort ranking
+
+        ranking = sorted(ranking, key=lambda x: x[1], reverse=True)
+        ranking = ranking[:10]
+
+        recommendation = ""
+        for movie in ranking:
+            recommendation += str(movie[0]) + ". " + self.movies[movie[0]].get_title() + ": " + str(movie[1]) + "\n"
+
+        return recommendation
