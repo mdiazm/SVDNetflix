@@ -7,6 +7,7 @@ from chrono import Timer
 import numpy as np
 import pickle
 import config as cfg
+import os
 
 class SVDNetflix:
 
@@ -27,7 +28,7 @@ class SVDNetflix:
     initializationValue = 0.1
     learningRate = 0.001
     regularizeParameter = 0.02 # As recommended in the article https://sifter.org/~simon/journal/20061211.html
-    numEpochs = 12
+    numEpochs = 120
 
     def __init__(self):
         self.tag_movie = {}
@@ -102,6 +103,11 @@ class SVDNetflix:
 
             # Initialize cache for this feature
             self.init_cache(feature)
+
+            # If latent factors file exists, not to train.
+            if os.path.isfile(cfg.matrix):
+                self.load_data()
+                return
 
             # Train during numEpochs iterations
             for epoch in range(self.numEpochs):
